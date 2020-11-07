@@ -1,67 +1,86 @@
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class HospitalRoom {
-    ReentrantLock doctorEntrylock = new ReentrantLock();
-    ReentrantLock patientEntrylock = new ReentrantLock();
+    final ReentrantLock doctorEntryLock = new ReentrantLock();
+    final ReentrantLock patientEntryLock = new ReentrantLock();
 
-    AtomicInteger doctorCount = new AtomicInteger(0);
-    AtomicInteger patientCount = new AtomicInteger(0);
+    private final Object doctorEnter = new Object();
+    private final Object doctorLeave = new Object();
+    private final Object patientEnter = new Object();
+    private final Object patientLeave = new Object();
+
+    int doctorCount = 0;
+    int patientCount = 0;
 
     public boolean doctorEnter(Doctor d) throws InterruptedException {
-        if(doctorCount.get() > 0 || doctorEntrylock.isLocked()) {
+        synchronized (doctorEnter) {
+            doctorEntryLock.lock();
+            if (doctorCount < 1) {
+                doctorCount++;
+                System.out.println("Doctor " + d.name + " Entered, number of doctor " + doctorCount);
+                doctorEntryLock.unlock();
+                return true;
+            }
             System.out.println("Doctor " + d.name + " is waiting to Enter, number of doctor " + doctorCount);
+            doctorEntryLock.unlock();
+
+            while (true) {
+                doctorEntryLock.lock();
+                if (doctorCount < 1) {
+                    doctorCount++;
+                    System.out.println("Doctor " + d.name + " Entered, number of doctor " + doctorCount);
+                    doctorEntryLock.unlock();
+                    return true;
+                }
+                doctorEntryLock.unlock();
+            }
         }
-
-        while(doctorCount.get() > 0 || doctorEntrylock.isLocked()) {}
-
-        doctorEntrylock.lock();
-        System.out.println(String.format("Doctor %s Entered, number of doctor %d", d.name, doctorCount.get() + 1));
-        doctorCount.incrementAndGet();
-        doctorEntrylock.unlock();
-
-        return true;
     }
 
     public boolean doctorLeave(Doctor d) throws InterruptedException {
-        if(doctorEntrylock.isLocked()) {
-            throw new IllegalStateException("Unexpected status of the system");
+        synchronized (doctorLeave) {
+            doctorEntryLock.lock();
+            doctorCount--;
+            System.out.println("Doctor " + d.name + " Left, number of doctor " + doctorCount);
+            doctorEntryLock.unlock();
+            return true;
         }
-
-        doctorEntrylock.lock();
-        System.out.println("Doctor " + d.name + " left, number of doctor " + doctorCount.decrementAndGet());
-        doctorEntrylock.unlock();
-
-        return true;
     }
 
     public boolean patientEnter(Patient p) throws InterruptedException {
-        if(patientCount.get() > 2 || patientEntrylock.isLocked()) {
-            System.out.println("Patient " + p.name + " is waiting to Enter, number of patient " + patientCount);
+        synchronized (patientEnter) {
+            patientEntryLock.lock();
+            if (patientCount < 3) {
+                patientCount++;
+                System.out.println("Patient " + p.name + " entered, number of patients " + patientCount);
+                patientEntryLock.unlock();
+                return true;
+            }
+            System.out.println("Patient " + p.name + " is waiting to enter, number of patient " + patientCount);
+            patientEntryLock.unlock();
+
+            while (true) {
+                patientEntryLock.lock();
+                if (patientCount < 3) {
+                    patientCount++;
+                    System.out.println("Patient " + p.name + " entered, number of patients " + patientCount);
+                    patientEntryLock.unlock();
+                    return true;
+                }
+                patientEntryLock.unlock();
+            }
         }
-
-        while(patientCount.get() > 2 || patientEntrylock.isLocked()) {}
-
-        patientEntrylock.lock();
-        System.out.println(String.format("Patient %s Entered, number of patient %d", p.name, patientCount.get() + 1));
-        patientCount.incrementAndGet();
-        patientEntrylock.unlock();
-
-        return true;
     }
 
     public boolean patientLeave(Patient p) throws InterruptedException {
-        if(patientEntrylock.isLocked()) {
-            return false;
+        synchronized (patientLeave) {
+            patientEntryLock.lock();
+            patientCount--;
+            System.out.println("Patient " + p.name + "left");
+            patientEntryLock.unlock();
+            return true;
         }
-
-        patientEntrylock.lock();
-        System.out.println("Patient " + p.name + " left, number of patient " + patientCount.decrementAndGet());
-        patientEntrylock.unlock();
-
-        return true;
     }
-
 }
 
 
