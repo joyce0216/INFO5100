@@ -1,83 +1,72 @@
 import java.util.concurrent.locks.ReentrantLock;
 
 public class HospitalRoom {
-    final ReentrantLock doctorEntryLock = new ReentrantLock();
-    final ReentrantLock patientEntryLock = new ReentrantLock();
-
     private final Object doctorEnter = new Object();
     private final Object doctorLeave = new Object();
     private final Object patientEnter = new Object();
     private final Object patientLeave = new Object();
 
-    int doctorCount = 0;
-    int patientCount = 0;
+    private int doctorCount = 0;
+    private int patientCount = 0;
 
     public boolean doctorEnter(Doctor d) throws InterruptedException {
-        synchronized (doctorEnter) {
-            doctorEntryLock.lock();
-            if (doctorCount < 1) {
-                doctorCount++;
-                System.out.println("Doctor " + d.name + " Entered, number of doctor " + doctorCount);
-                doctorEntryLock.unlock();
-                return true;
-            }
-            System.out.println("Doctor " + d.name + " is waiting to Enter, number of doctor " + doctorCount);
-            doctorEntryLock.unlock();
-
-            while (true) {
-                doctorEntryLock.lock();
+        synchronized(doctorEnter) {
+            synchronized (doctorLeave) {
                 if (doctorCount < 1) {
                     doctorCount++;
                     System.out.println("Doctor " + d.name + " Entered, number of doctor " + doctorCount);
-                    doctorEntryLock.unlock();
                     return true;
                 }
-                doctorEntryLock.unlock();
+                System.out.println("Doctor " + d.name + " is waiting to Enter, number of doctor " + doctorCount);
+            }
+
+            while (true) {
+                synchronized (doctorLeave) {
+                    if (doctorCount < 1) {
+                        doctorCount++;
+                        System.out.println("Doctor " + d.name + " Entered, number of doctor " + doctorCount);
+                        return true;
+                    }
+                }
             }
         }
     }
 
     public boolean doctorLeave(Doctor d) throws InterruptedException {
         synchronized (doctorLeave) {
-            doctorEntryLock.lock();
             doctorCount--;
             System.out.println("Doctor " + d.name + " Left, number of doctor " + doctorCount);
-            doctorEntryLock.unlock();
             return true;
         }
     }
 
     public boolean patientEnter(Patient p) throws InterruptedException {
         synchronized (patientEnter) {
-            patientEntryLock.lock();
-            if (patientCount < 3) {
-                patientCount++;
-                System.out.println("Patient " + p.name + " entered, number of patients " + patientCount);
-                patientEntryLock.unlock();
-                return true;
-            }
-            System.out.println("Patient " + p.name + " is waiting to enter, number of patient " + patientCount);
-            patientEntryLock.unlock();
-
-            while (true) {
-                patientEntryLock.lock();
+            synchronized (patientLeave) {
                 if (patientCount < 3) {
                     patientCount++;
                     System.out.println("Patient " + p.name + " entered, number of patients " + patientCount);
-                    patientEntryLock.unlock();
                     return true;
                 }
-                patientEntryLock.unlock();
+                System.out.println("Patient " + p.name + " is waiting to enter, number of patient " + patientCount);
+            }
+
+            while (true) {
+                synchronized (patientLeave) {
+                    if (patientCount < 3) {
+                        patientCount++;
+                        System.out.println("Patient " + p.name + " entered, number of patients " + patientCount);
+                        return true;
+                    }
+                }
             }
         }
     }
 
     public boolean patientLeave(Patient p) throws InterruptedException {
         synchronized (patientLeave) {
-            patientEntryLock.lock();
             patientCount--;
             System.out.println("Patient " + p.name + "left");
-            patientEntryLock.unlock();
             return true;
         }
     }
