@@ -1,4 +1,3 @@
-import java.util.concurrent.locks.ReentrantLock;
 
 public class HospitalRoom {
     private final Object doctorEnter = new Object();
